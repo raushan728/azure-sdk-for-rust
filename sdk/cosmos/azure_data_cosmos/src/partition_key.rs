@@ -244,24 +244,57 @@ impl From<InnerPartitionKeyValue> for PartitionKeyValue {
 }
 
 impl From<&'static str> for PartitionKeyValue {
+    /// Creates a [`PartitionKeyValue`] from a string slice with a `'static` lifetime.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use azure_data_cosmos::PartitionKeyValue;
+    /// let pkv = PartitionKeyValue::from("my-partition-key");
+    /// ```
     fn from(value: &'static str) -> Self {
         InnerPartitionKeyValue::String(value.to_string()).into()
     }
 }
 
 impl From<String> for PartitionKeyValue {
+    /// Creates a [`PartitionKeyValue`] from a [`String`].
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use azure_data_cosmos::PartitionKeyValue;
+    /// let pkv = PartitionKeyValue::from(String::from("my-partition-key"));
+    /// ```
     fn from(value: String) -> Self {
         InnerPartitionKeyValue::String(value).into()
     }
 }
 
 impl From<&String> for PartitionKeyValue {
+    /// Creates a [`PartitionKeyValue`] from a [`String`].
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use azure_data_cosmos::PartitionKeyValue;
+    /// let pkv = PartitionKeyValue::from(&String::from("my-partition-key"));
+    /// ```
     fn from(value: &String) -> Self {
         InnerPartitionKeyValue::String(value.clone()).into()
     }
 }
 
 impl From<Cow<'static, str>> for PartitionKeyValue {
+    /// Creates a [`PartitionKeyValue`] from a [`Cow<'static, str>`].
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use azure_data_cosmos::PartitionKeyValue;
+    /// use std::borrow::Cow;
+    /// let pkv = PartitionKeyValue::from(Cow::Borrowed("my-pk"));
+    /// ```
     fn from(value: Cow<'static, str>) -> Self {
         InnerPartitionKeyValue::String(value.into_owned()).into()
     }
@@ -270,6 +303,14 @@ impl From<Cow<'static, str>> for PartitionKeyValue {
 macro_rules! impl_from_number {
     ($source_type: ty) => {
         impl From<$source_type> for PartitionKeyValue {
+            /// Creates a [`PartitionKeyValue`] from a numeric value.
+            ///
+            /// # Examples
+            ///
+            /// ```rust
+            /// use azure_data_cosmos::PartitionKeyValue;
+            /// let pkv = PartitionKeyValue::from(42);
+            /// ```
             fn from(value: $source_type) -> Self {
                 InnerPartitionKeyValue::Number(value as f64).into()
             }
@@ -288,6 +329,20 @@ impl_from_number!(u64);
 impl_from_number!(u8);
 impl_from_number!(usize);
 
+impl From<bool> for PartitionKeyValue {
+    /// Creates a [`PartitionKeyValue`] from a [`bool`].
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use azure_data_cosmos::PartitionKeyValue;
+    /// let pkv = PartitionKeyValue::from(true);
+    /// ```
+    fn from(value: bool) -> Self {
+        InnerPartitionKeyValue::Bool(value).into()
+    }
+}
+
 impl From<f32> for PartitionKeyValue {
     /// Creates a [`PartitionKeyValue`] from an `f32`.
     ///
@@ -296,6 +351,13 @@ impl From<f32> for PartitionKeyValue {
     /// # Panics
     ///
     /// This method panics if given an Infinite or NaN value.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use azure_data_cosmos::PartitionKeyValue;
+    /// let pkv = PartitionKeyValue::from(4.2f32);
+    /// ```
     fn from(value: f32) -> Self {
         assert!(
             !value.is_infinite() && !value.is_nan(),
@@ -311,6 +373,13 @@ impl From<f64> for PartitionKeyValue {
     /// # Panics
     ///
     /// This method panics if given an Infinite or NaN value.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use azure_data_cosmos::PartitionKeyValue;
+    /// let pkv = PartitionKeyValue::from(12.34);
+    /// ```
     fn from(value: f64) -> Self {
         assert!(
             !value.is_infinite() && !value.is_nan(),
@@ -321,6 +390,17 @@ impl From<f64> for PartitionKeyValue {
 }
 
 impl<T: Into<PartitionKeyValue>> From<Option<T>> for PartitionKeyValue {
+    /// Creates a [`PartitionKeyValue`] from an [`Option<T>`].
+    ///
+    /// If the value is `None`, it is treated as a null partition key.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use azure_data_cosmos::PartitionKeyValue;
+    /// let pkv = PartitionKeyValue::from(Some("tenant1"));
+    /// let pkv_null = PartitionKeyValue::from(None::<&str>);
+    /// ```
     fn from(value: Option<T>) -> Self {
         match value {
             Some(t) => t.into(),
@@ -330,6 +410,16 @@ impl<T: Into<PartitionKeyValue>> From<Option<T>> for PartitionKeyValue {
 }
 
 impl From<()> for PartitionKey {
+    /// Creates a [`PartitionKey`] that represents an empty list of partition key values.
+    ///
+    /// This is used to signal a cross-partition query.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use azure_data_cosmos::PartitionKey;
+    /// let pk = PartitionKey::from(());
+    /// ```
     fn from(_: ()) -> Self {
         PartitionKey::EMPTY
     }
@@ -372,6 +462,14 @@ impl From<Vec<PartitionKeyValue>> for PartitionKey {
 }
 
 impl<T: Into<PartitionKeyValue>> From<T> for PartitionKey {
+    /// Creates a single-level [`PartitionKey`] from any type that can be converted into a [`PartitionKeyValue`].
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use azure_data_cosmos::PartitionKey;
+    /// let pk = PartitionKey::from("tenant1");
+    /// ```
     fn from(value: T) -> Self {
         PartitionKey(vec![value.into()])
     }
@@ -380,6 +478,14 @@ impl<T: Into<PartitionKeyValue>> From<T> for PartitionKey {
 macro_rules! impl_from_tuple {
     ($($n:tt $name:ident)*) => {
         impl<$($name: Into<PartitionKeyValue>),*> From<($($name,)*)> for PartitionKey {
+            /// Creates a hierarchical [`PartitionKey`] from a tuple of values.
+            ///
+            /// # Examples
+            ///
+            /// ```rust
+            /// use azure_data_cosmos::PartitionKey;
+            /// let pk = PartitionKey::from(("parent", "child"));
+            /// ```
             fn from(value: ($($name,)*)) -> Self {
                 PartitionKey(vec![$(
                     value.$n.into()
@@ -618,5 +724,82 @@ mod tests {
         let keys = vec![PartitionKeyValue::from("tenant1"), PartitionKey::UNDEFINED];
         let partition_key = PartitionKey::from(keys);
         assert_eq!(key_to_string(partition_key), r#"["tenant1",{}]"#);
+    }
+
+    #[test]
+    fn bool_values() {
+        assert_eq!(key_to_string(true), r#"[true]"#);
+        assert_eq!(key_to_string(false), r#"[false]"#);
+    }
+
+    #[test]
+    fn string_variants() {
+        // String
+        assert_eq!(
+            key_to_string(String::from("my_partition_key")),
+            r#"["my_partition_key"]"#
+        );
+        // &String
+        let s = String::from("my_partition_key");
+        assert_eq!(key_to_string(&s), r#"["my_partition_key"]"#);
+        // Cow
+        assert_eq!(
+            key_to_string(std::borrow::Cow::<'static, str>::Borrowed(
+                "my_partition_key"
+            )),
+            r#"["my_partition_key"]"#
+        );
+    }
+
+    #[test]
+    fn hierarchical_2_level() {
+        assert_eq!(key_to_string(("parent", "child")), r#"["parent","child"]"#);
+    }
+
+    #[test]
+    fn hierarchical_3_level() {
+        assert_eq!(
+            key_to_string(("tenant", "user", 123)),
+            r#"["tenant","user",123]"#
+        );
+    }
+
+    #[test]
+    fn options_exhaustive() {
+        assert_eq!(key_to_string(Some(true)), r#"[true]"#);
+        assert_eq!(key_to_string(None::<bool>), r#"[null]"#);
+        assert_eq!(key_to_string(Some(42)), r#"[42]"#);
+        assert_eq!(key_to_string(Some(String::from("val"))), r#"["val"]"#);
+    }
+
+    #[test]
+    fn wrapped_single_value() {
+        // Test that From<T> for PartitionKey wraps correctly
+        let pk: PartitionKey = "single".into();
+        assert_eq!(key_to_string(pk), r#"["single"]"#);
+    }
+
+    #[test]
+    #[should_panic(expected = "value should be a non-infinite number")]
+    fn f32_nan_panic() {
+        let _ = PartitionKey::from(f32::NAN);
+    }
+
+    #[test]
+    #[should_panic(expected = "value should be a non-infinite number")]
+    fn f32_infinity_panic() {
+        let _ = PartitionKey::from(f32::INFINITY);
+    }
+
+    #[test]
+    #[should_panic(expected = "value should be a non-infinite number")]
+    fn f64_nan_panic() {
+        let _ = PartitionKey::from(f64::NAN);
+    }
+
+    #[test]
+    #[should_panic(expected = "value should be a non-infinite number")]
+    fn f64_infinity_panic() {
+        let _ = PartitionKey::from(f64::INFINITY);
     }
 }
